@@ -16,6 +16,11 @@
 
   12 个文件取自本机原厂 rootfs /etc/conf/rtl8852ce/RFE54/RTK66587_BPF_YH1570/。
 
+- **修复打包：RF 参数表从 files-6.18 挪到 target base-files overlay**。
+  files-6.18 树进的是内核源码目录、根本不进 rootfs——lan22 的 RFE50 四文件
+  因此缺失，8192XB 探针 request_firmware 失败（-2→-12），2.4G 整体消失。
+  RFE50（8192xbe）与 RTK66587_BPF_YH1570（8852ce）现改由 target
+  base-files 下发（pon 配置同一机制，经 sync-overlay.sh 落位）。
 - 2.4G 的 RFE50 修复随本版一起携带（见 lan22）。
 
 ### 验证点
