@@ -1,3 +1,54 @@
+## v0.8.1-pt1570-lan21
+
+### 本版内容
+
+- **`DISTRIB_REVISION` 修复重写：直接给 `include/version.mk` 的 `REVISION` 赋值**（`c0366ea`）。
+
+  lan20 验证了上一版思路无效：`CONFIG_VERSION_CODE` 虽是合法符号、
+  `CONFIG_VERSIONOPT=y` 也已打开，但 `make world` 的 oldconfig 阶段仍会把它丢掉，
+  刷出来还是 `r0-79bc56c`。
+
+  这次改走 `version.mk` 自身：它顶部本有 SDK 预留的 `# REVISION:=x`，
+  取消注释并赋值为 `r0-<commit>`。`VERSION_CODE` 为空时 `DISTRIB_REVISION`
+  正是回落到这个 `REVISION`，中间不再有会被丢弃的环节。
+
+- **补 `platform_copy_config()` 兜底钩子**（`c0366ea`）。
+
+  lan20 已实测 `nand_do_restore_config` 修复有效（配置保留、PPPoE 正常拨号）。
+  `do_stage2` 的标准流程还会调用 `platform_copy_config()`，本版补上作为第二道保险。
+  升级日志出现 `platform_copy_config: no backup at '/tmp/sysupgrade.tgz'` 属正常——
+  前一个钩子已把备份移进新卷，两个钩子成功其一即可。
+
+- **5G 吞吐：删除 runtime inputs 注入 RadioA/RadioB 的 TX PA delay 1.6 µs**（`93fddc6`）。
+
+  逐文件对比原厂 `RFE54` 目录（110 个文件），OP 的 `RadioA.txt` / `RadioB.txt`
+  各多两行，原厂没有：
+
+  ```
+  //TX PA delay
+  0x15	0x00040   //delay 1.6us
+  ```
+
+  设备上删除并重启实测：PC 协商速率 MCS 7（1441 Mbps）→
+  **MCS 8–9（1729–1921 Mbps）**，下行 UDP 284 → **362–369 Mbps**（+28%）。
+
+  修复落在 `build.sh`：CI 从上游 release 拉取 runtime inputs，仓库里没有源文件，
+  故在解包之后、`make world` 之前用 awk 删掉这两行。
+  注意 `PHY_REG.txt` 的 `0x4e38` 差异**不能动**——改成 0 后 5G 直接起不来。
+
+- **2.4G：恢复 FEM GPIO 配置**（`8c4314c`）。
+
+  lan18 曾把 FEM GPIO 初始化改为只对 5G（RTL8852C）执行，试图解决
+  "手机搜不到 2.4G AP"，结果 **2.4G 发射链路直接受损**。本版恢复原配置。
+  "手机搜不到 2.4G AP"本身仍未解决，剩余排查方向见交接文档 §16（只跳过 LNA /
+  改 TXPWR 功率表 / 查 RFE 编号）。
+
+### 验证点
+
+1. `/etc/openwrt_release` 的 `DISTRIB_REVISION` 应变为 `r0-<本 commit>`
+2. 5G：`iw dev phy1-ap0 station dump` 设备发射方向应协商 MCS 8 以上
+3. 2.4G：AX210 应能搜到并关联 `PT1570-2.4G`（FEM 恢复后发射不受损）
+
 ## v0.8.1-pt1570-lan20
 
 ### 本版内容
