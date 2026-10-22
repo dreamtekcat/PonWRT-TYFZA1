@@ -180,7 +180,13 @@ void rtl_ax_phy_release(struct rtl_ax_phy_inputs *inputs)
 int rtl_ax_phy_load(struct device *dev, unsigned int chip, struct rtl_ax_phy_inputs *inputs)
 {
 	const char *family = chip == RTL_AX_8852C ? "rtl8852ce" : "rtl8192xbe";
-	const char *fem = chip == RTL_AX_8852C ? "RTK66587_BPF" : "RTK66287";
+	/* PT1570-R10's 2.4G radio reports RFE 50: the stock firmware feeds it
+	 * /etc/conf/rtl8192xbe/RFE50/, which ships no FEM subdirectory because
+	 * the board has no external 2.4G FEM. TYFZA1's radios are RFE 54 with
+	 * RTK* FEM tables. Keep one RFE per chip and let the XB re-run its base
+	 * tables for the FEM re-init pass (same values, harmless rewrite). */
+	const char *rfe = chip == RTL_AX_8852C ? "RFE54" : "RFE50";
+	const char *fem = chip == RTL_AX_8852C ? "RTK66587_BPF" : "";
 	const char *names[] = { "PHY_REG.txt", "PHY_REG_GAIN.txt", "RadioA.txt", "RadioB.txt" };
 	unsigned int stage, id;
 	char name[128];
@@ -189,8 +195,9 @@ int rtl_ax_phy_load(struct device *dev, unsigned int chip, struct rtl_ax_phy_inp
 	inputs->chip = chip;
 	for (stage = 0; stage < RTL_AX_PHY_STAGES; stage++)
 		for (id = 0; id < RTL_AX_PHY_TABLES; id++) {
-			snprintf(name, sizeof(name), "realtek/tyfza1/%s/RFE54/%s%s%s",
-				 family, stage ? fem : "", stage ? "/" : "", names[id]);
+			snprintf(name, sizeof(name), "realtek/tyfza1/%s/%s/%s%s%s",
+				 family, rfe, stage && *fem ? fem : "",
+				 stage && *fem ? "/" : "", names[id]);
 			ret = rtl_ax_phy_read_table(dev, name, &inputs->table[stage][id]);
 			if (ret) {
 				rtl_ax_phy_release(inputs);

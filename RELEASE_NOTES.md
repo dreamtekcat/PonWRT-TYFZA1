@@ -1,3 +1,42 @@
+## v0.8.1-pt1570-lan22
+
+### 本版内容
+
+- **2.4G 下行数据链路修复：给 8192XB 加载它自己的 RFE50 参数组**（根因级别修复）。
+
+  lan21 实测（AX210 连 2.4G）：信标信号 96%、上行 TCP 35 Mbps，但
+  **TCP 下行 0 字节、UDP 下行 180 Kbps / 丢包 29%**——设备的 2.4G 发射
+  数据帧完全出不去，minstrel 吞吐估计崩到 41 Mbps。
+
+  反汇编本机原厂 rtk_wifi6.ko（未 strip，取自 ubi_r1）定位到三个根因：
+
+  1. PT1570 的 2.4G 芯片 efuse 报告 **RFE 50**（原厂启动日志下载
+     /etc/conf/rtl8192xbe/RFE50/ 参数组），而移植驱动把 RFE54 目录硬编码
+     给了两个芯片——8192XB 一直被 TYFZA1 的 RFE54 参数初始化。
+  2. 原厂 halbb_gpio_setting_init_8192xb 只在 RFE 51..56 时编程
+     PAPE/TRSW/LNA 字节（halbb_gpio_rfm_8192xb 三个分支各不相同），
+     **RFE 50 一个分支都不进**；移植代码却无条件写入 RFE53/54 的值。
+  3. 原厂 RFE50 目录没有 FEM 子目录——PT1570 的 2.4G 没有外置 FEM
+     （板卡硬件事实），内置 PA/LNA 路径不需要 FEM 重初始化。
+
+  修复：按芯片选择参数目录（8852C 保持 RFE54，8192XB 改用 RFE50）；
+  8192XB 的 FEM 重初始化阶段复用 RFE50 基础表（同值无害重放）；
+  8192XB 不再写 PAPE/TRSW/LNA 字节；RFE50 四个参数文件
+  （PHY_REG/PHY_REG_GAIN/RadioA/RadioB，取自本机原厂 rootfs）随固件发布。
+
+  佐证：TXPWR 四表在 RFE54/RFE50 间逐字节一致（校准数据无问题）；
+  差异集中在 PHY_REG（46 行）、RadioA/B（各约 108 行，含 RFE50 特有的
+  LUT_RXG_GAIN 接收增益表）。加载框架（request_firmware、增益解码、
+  延迟表、radio 命令执行器）不变，仅换数据源。
+
+- 5G 路径不受影响：8852C 的加载目录与 FEM 阶段保持原样。
+
+### 验证点
+
+1. 2.4G 关联后 iperf 下行应从 180 Kbps 恢复到两位数 Mbps 以上
+2. 手机应能搜到 PT1570-2.4G（信标/Probe response 发射恢复）
+3. 5G 吞吐应保持 lan21 水平（MCS 9 / 下行 UDP ~543 Mbps）
+
 ## v0.8.1-pt1570-lan21
 
 ### 本版内容

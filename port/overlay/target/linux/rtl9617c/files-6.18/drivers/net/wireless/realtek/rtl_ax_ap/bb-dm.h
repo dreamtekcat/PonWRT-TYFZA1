@@ -109,19 +109,21 @@ static inline void rtl_ax_bb_dm_gpio_start(const struct rtl_ax_io *io, unsigned 
 			rtl_ax_update32(io, reg, 3U << shift, value << shift);
 		}
 	}
-	for (path = 0; path < 2; path++) {
-		unsigned int reg = path ? 0x17894 : 0x15894;
+	/* The original gpio_setting_init_8192xb@2f0218 only programs these
+	 * bytes for RFE 51..56 (the halbb_gpio_rfm_8192xb branches); RFE 50
+	 * falls through with none of them - the internal PA/LNA path needs no
+	 * external FEM switching. TYFZA1's RFE 54 radio does. */
+	if (chip == RTL_AX_8852C) {
+		for (path = 0; path < 2; path++) {
+			unsigned int reg = path ? 0x17894 : 0x15894;
 
-		/* PAPE byte0=4,TRSW byte1=6. RFE53/54 LNA inverted,
-		 * standby mode=1,so LNA byte2=a instead of the default8. */
-		rtl_ax_update32(io, reg, 255, 4);
-		rtl_ax_update32(io, reg, 255U << 8, 6U << 8);
-		if (chip == RTL_AX_8192XB)
+			/* PAPE byte0=4,TRSW byte1=6. RFE53/54 LNA inverted,
+			 * standby mode=1,so LNA byte2=a instead of the default8. */
+			rtl_ax_update32(io, reg, 255, 4);
+			rtl_ax_update32(io, reg, 255U << 8, 6U << 8);
 			rtl_ax_update32(io, reg, 255U << 16, 10U << 16);
+		}
 	}
-	if (chip == RTL_AX_8852C)
-		for (path = 0; path < 2; path++)
-			rtl_ax_update32(io, path ? 0x17894 : 0x15894, 255U << 16, 10U << 16);
 	dm->gpio_ready = true;
 }
 
