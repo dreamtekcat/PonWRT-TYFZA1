@@ -281,7 +281,7 @@ int rtl_ax_limits_load(struct device *dev, unsigned int chip, unsigned int stage
 	 * RTK* FEM tables. Keep one RFE per chip and let the XB re-run its base
 	 * tables for the FEM re-init pass (same values, harmless rewrite). */
 	const char *rfe = chip == RTL_AX_8852C ? "RFE54" : "RFE50";
-	const char *fem = chip == RTL_AX_8852C ? "RTK66587_BPF" : "";
+	const char *fem = chip == RTL_AX_8852C ? "RTK66587_BPF_YH1570" : "";  /* stock PT1570 FEM, see rtl_ax_phy_load */
 	const char *const names[] = {"TXPWR_LMT.txt", "TXPWR_LMT_RU.txt",
 		"TXPWR_LMT_6G_LPI.txt", "TXPWR_LMT_RU_6G_LPI.txt",
 		"TXPWR_LMT_6G_STD.txt", "TXPWR_LMT_RU_6G_STD.txt",

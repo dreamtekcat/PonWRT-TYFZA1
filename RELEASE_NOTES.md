@@ -1,3 +1,29 @@
+## v0.8.1-pt1570-lan23
+
+### 本版内容
+
+- **5G FEM 阶段对齐原厂：8852C 切换到 RTK66587_BPF_YH1570 参数组**。
+
+  核对原厂 rtk_wifi6.ko 发现：模块字符串表里唯一的 FEM 目录名是
+  RTK66587_BPF_YH1570（不存在裸 RTK66587_BPF），PT1570 的 config_hs.xml
+  记录 HW_WLAN0_FEM_TYPE=238——原厂 5G 的 FEM 阶段使用 YH1570 变体，
+  移植此前继承 TYFZA1 的 RTK66587_BPF 目录（原厂模块不引用它）。
+
+  YH1570 与 BPF 的实质差异（RadioA/B 与全部 TXPWR_LMT 系列完全一致）：
+  - 0x198/0x1A4 与 TXPWR_ByRate 的 MCS11_8 行：功率 17,17,18,19 →
+    **14,15,17,19**（最高两档 MCS 主动降功率换 EVM，让顶速可靠协商）
+  - PHY_REG_GAIN 70 行（YH1570 文件头注明 version 52-for 17C）
+
+  12 个文件取自本机原厂 rootfs /etc/conf/rtl8852ce/RFE54/RTK66587_BPF_YH1570/。
+
+- 2.4G 的 RFE50 修复随本版一起携带（见 lan22）。
+
+### 验证点
+
+1. 5G 协商速率：MCS10/11（2402 Mbps）是否可稳定协商
+2. 5G 吞吐对比 lan21 基线（MCS 9 / 下行 UDP 543 Mbps）
+3. 2.4G 保持 lan22 修复结果（手机可见性 + 下行恢复）
+
 ## v0.8.1-pt1570-lan22
 
 ### 本版内容

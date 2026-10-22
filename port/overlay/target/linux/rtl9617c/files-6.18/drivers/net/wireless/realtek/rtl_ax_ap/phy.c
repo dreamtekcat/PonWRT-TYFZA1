@@ -186,7 +186,12 @@ int rtl_ax_phy_load(struct device *dev, unsigned int chip, struct rtl_ax_phy_inp
 	 * RTK* FEM tables. Keep one RFE per chip and let the XB re-run its base
 	 * tables for the FEM re-init pass (same values, harmless rewrite). */
 	const char *rfe = chip == RTL_AX_8852C ? "RFE54" : "RFE50";
-	const char *fem = chip == RTL_AX_8852C ? "RTK66587_BPF" : "";
+	/* The 5G radio is RFE 54 like TYFZA1, but the stock PT1570 module selects
+	 * the RTK66587_BPF_YH1570 FEM tables for this board (the only FEM name
+	 * in the stock binary; config_hs.xml HW_WLAN0_FEM_TYPE=238). YH1570
+	 * backs MCS10/11 TX power off (17,17,18,19 -> 14,15,17,19) for EVM,
+	 * which is what the stock ships to keep the top rates reliable. */
+	const char *fem = chip == RTL_AX_8852C ? "RTK66587_BPF_YH1570" : "";
 	const char *names[] = { "PHY_REG.txt", "PHY_REG_GAIN.txt", "RadioA.txt", "RadioB.txt" };
 	unsigned int stage, id;
 	char name[128];
