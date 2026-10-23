@@ -422,13 +422,14 @@ static inline void rtl_ax_mac_trx_registers(const struct rtl_ax_io *io)
 	if (value != next)
 		io->write32(io->ctx, 0x9410, next);
 	value = io->read32(io->ctx, 0x9414);
-	/* The stock derives byte0 (WP aggregate threshold) and byte2 (release
-	 * timeout) from the board config struct; TYFZA1's values were hardcoded
-	 * here as 12/none. With 12 the 2.4G WP reports only release once twelve
-	 * aggregate, which on a nearly idle queue paces completions at ~85/s and
-	 * collapses downstream throughput to a trickle. Release every WP instead
-	 * until the PT1570 config values are recovered. */
-	next = (value & 0xff00ff00) | 0x00ff0001;
+	/* The stock rtl8192xbe_halinit.c derives byte0 (WP aggregate threshold)
+	 * from the FW report-buffer size: agg = min(rp_buf_size / 4 - 1, 121),
+	 * and byte2 (the release timeout) defaults to 255. TYFZA1's values were
+	 * hardcoded here as agg=12/tmr=0 - with tmr=0 the firmware never releases
+	 * a partial aggregate, so on a nearly idle 2.4G queue the WP reports only
+	 * flushed at ~85/s (12 per 140ms), collapsing downstream throughput to a
+	 * trickle. Use the stock PCIe default: agg=121, tmr=255. */
+	next = (value & 0xff00ff00) | 0x00ff0079;
 	if (value != next)
 		io->write32(io->ctx, 0x9414, next);
 	/* set_l2_status changes a host state byte,not a hardware register.
