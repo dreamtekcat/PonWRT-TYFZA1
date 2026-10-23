@@ -1,3 +1,38 @@
+## v0.8.1-pt1570-lan25
+
+### 本版内容
+
+- **回滚 lan24 的 RPQ 聚合实验并按芯片拆分 0x9414 配置**。
+
+  lan24 把 RPQ 聚合阈值改为 1（每 WP 立即回报）做涓流实验——
+  实测 2.4G 涓流未修复（1.49M，同量级），且**该值经共享函数同时
+  作用于 8852C：满速 5G 下每 WP 一报打爆回报处理路径，5G TX 塌陷**
+  （关联 1922M 但 SSH/数据全部超时）。
+
+  本版按芯片拆分 R_AX_RLSRPT0_CFG1(0x9414)：
+  - 8852C：恢复 agg=12/tmr=255（lan21-23 已验证可用）
+  - 8192XB：**agg=121/tmr=255**——原厂 rtl8192xbe_halinit.c 的
+    源码级取值（agg=min(rp_buf_size/4-1,121) 动态、tmr 默认 255；
+    本机原厂日志 "RP agg is 121 for 640." 为证）
+  - rtl_ax_mac_trx_registers 签名增加 chip 参数（唯一调用点 pci.c 同步）
+
+  依据：GP3000 GPL 源码（g6_wifi_driver 完整 C 源码，即原厂驱动家族）
+  —— halbb_8192xb_api.c 的 RFE 分支 {51,52}/{53,54,94}/{55,56}
+  （RFE50 无分支）、mac_ax/hw.c 的 rpr_cfg_poh 默认档、
+  rtl8192xbe_halinit.c 的 agg 动态公式，全部与反汇编结论互证。
+
+- **修复打包**：RF 参数表从 files-6.18 挪到 target base-files overlay
+  （files-6.18 树进内核源码目录、不进 rootfs——lan22 的 RFE50 缺失根因）。
+- 2.4G 下行涓流的根因仍在 TX 数据通路层（RPQ 聚合/参数/固件 blob/
+  功率 TPU 均已排除）；GP3000 源码使 txdes_proc_data_8192xb 等原厂
+  TX 通路实现可与移植 tx.c 逐行对照（下一步）。
+
+### 验证点
+
+1. 5G 恢复 lan21 基线（MCS 9 / 下行 UDP ~543 Mbps）——agg=12 回归
+2. 2.4G 关联/探针正常（RFE50 8 文件 + agg=121/tmr=255 的组合首测）
+3. 2.4G 下行涓流预计仍在（待 TX 通路对照后修复）
+
 ## v0.8.1-pt1570-lan24
 
 ### 本版内容
