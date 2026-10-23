@@ -422,7 +422,13 @@ static inline void rtl_ax_mac_trx_registers(const struct rtl_ax_io *io)
 	if (value != next)
 		io->write32(io->ctx, 0x9410, next);
 	value = io->read32(io->ctx, 0x9414);
-	next = (value & 0xff00ff00) | 0x00ff000c;
+	/* The stock derives byte0 (WP aggregate threshold) and byte2 (release
+	 * timeout) from the board config struct; TYFZA1's values were hardcoded
+	 * here as 12/none. With 12 the 2.4G WP reports only release once twelve
+	 * aggregate, which on a nearly idle queue paces completions at ~85/s and
+	 * collapses downstream throughput to a trickle. Release every WP instead
+	 * until the PT1570 config values are recovered. */
+	next = (value & 0xff00ff00) | 0x00ff0001;
 	if (value != next)
 		io->write32(io->ctx, 0x9414, next);
 	/* set_l2_status changes a host state byte,not a hardware register.
