@@ -363,7 +363,7 @@ static inline int rtl_ax_mac_cmac_start(const struct rtl_ax_io *io,
 	return 0;
 }
 
-static inline void rtl_ax_mac_trx_registers(const struct rtl_ax_io *io)
+static inline void rtl_ax_mac_trx_registers(const struct rtl_ax_io *io, unsigned int chip)
 {
 	const struct {
 		unsigned int address, keep, enable;
@@ -422,14 +422,15 @@ static inline void rtl_ax_mac_trx_registers(const struct rtl_ax_io *io)
 	if (value != next)
 		io->write32(io->ctx, 0x9410, next);
 	value = io->read32(io->ctx, 0x9414);
-	/* The stock rtl8192xbe_halinit.c derives byte0 (WP aggregate threshold)
-	 * from the FW report-buffer size: agg = min(rp_buf_size / 4 - 1, 121),
-	 * and byte2 (the release timeout) defaults to 255. TYFZA1's values were
-	 * hardcoded here as agg=12/tmr=0 - with tmr=0 the firmware never releases
-	 * a partial aggregate, so on a nearly idle 2.4G queue the WP reports only
-	 * flushed at ~85/s (12 per 140ms), collapsing downstream throughput to a
-	 * trickle. Use the stock PCIe default: agg=121, tmr=255. */
-	next = (value & 0xff00ff00) | 0x00ff0079;
+	/* R_AX_RLSRPT0_CFG1: byte0 = WP aggregate threshold, byte2 = release
+	 * timeout. The stock rtl8192xbe_halinit.c uses agg=min(rp_buf_size/4-1,121)
+	 * (=121 on this board) with tmr=255; the 8852C's known-good value is
+	 * agg=12. agg=1 on the 8852C collapsed the 5G (per-WP reports overwhelmed
+	 * the report path), so keep the values per chip. */
+	if (chip == RTL_AX_8192XB)
+		next = (value & 0xff00ff00) | 0x00ff0079;
+	else
+		next = (value & 0xff00ff00) | 0x00ff000c;
 	if (value != next)
 		io->write32(io->ctx, 0x9414, next);
 	/* set_l2_status changes a host state byte,not a hardware register.
